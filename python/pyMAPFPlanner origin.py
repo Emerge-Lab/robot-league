@@ -4,7 +4,6 @@ from typing import Dict, List, Tuple,Set
 from queue import PriorityQueue
 import numpy as np
 
-import pdb
 # 0=Action.FW, 1=Action.CR, 2=Action.CCR, 3=Action.W
 
 class pyMAPFPlanner:
@@ -37,12 +36,10 @@ class pyMAPFPlanner:
         """
 
         # example of only using single-agent search
-        # return self.get_actions(time_limit)
+        return self.sample_priority_planner(time_limit)
         # print("python binding debug")
         # print("env.rows=",self.env.rows,"env.cols=",self.env.cols,"env.map=",self.env.map)
         # raise NotImplementedError("YOU NEED TO IMPLEMENT THE PYMAPFPLANNER!")
-        self.render()
-        return self.get_actions(time_limit)
 
     def naive_a_star(self,time_limit):
         print("I am planning")
@@ -214,55 +211,52 @@ class pyMAPFPlanner:
         print()
         return path
 
-    def get_actions(self,time_limit:int):
-        actions = np.random.randint(0, 4, size=self.env.num_of_agents)
+    def sample_priority_planner(self,time_limit:int):
+        actions = [MAPF.Action.W] * len(self.env.curr_states)
+        reservation = set()  # loc1, loc2, t
+
+        for i in range(self.env.num_of_agents):
+            print("start plan for agent", i)
+            path = []
+            if not self.env.goal_locations[i]:
+                print(", which does not have any goal left.")
+                path.append((self.env.curr_states[i].location, self.env.curr_states[i].orientation))
+                reservation.add((self.env.curr_states[i].location, -1, 1))
+
+        for i in range(self.env.num_of_agents):
+            print("start plan for agent", i)
+            path = []
+            if self.env.goal_locations[i]:
+                print("with start and goal:")
+                path = self.space_time_plan(
+                    self.env.curr_states[i].location,
+                    self.env.curr_states[i].orientation,
+                    self.env.goal_locations[i][0][0],
+                    reservation
+                )
+            
+            if path:
+                print("current location:", path[0][0], "current direction:", path[0][1])
+                if path[0][0] != self.env.curr_states[i].location:
+                    actions[i] = MAPF.Action.FW
+                elif path[0][1] != self.env.curr_states[i].orientation:
+                    incr = path[0][1] - self.env.curr_states[i].orientation
+                    if incr == 1 or incr == -3:
+                        actions[i] = MAPF.Action.CR
+                    elif incr == -1 or incr == 3:
+                        actions[i] = MAPF.Action.CCR
+
+                last_loc = -1
+                t = 1
+                for p in path:
+                    reservation.add((p[0], -1, t))
+                    if last_loc != -1:
+                        reservation.add((last_loc, p[0], t))
+                    last_loc = p[0]
+                    t += 1
+
         return actions
 
-    def get_observations_and_state(self):
-        obs_map = self.env.map.copy()
-        obs_current_timestep = self.env.curr_timestep
-        obs_state_location = [s.location for s in self.env.curr_states]
-        obs_state_orientation = [s.orientation for s in self.env.curr_states]
-        obs_state_goal = self.env.goal_locations.copy()
-
-        return obs_map, obs_current_timestep, obs_state_location, obs_state_orientation, obs_state_goal
-
-    def get_observations(self):
-        obs_map, obs_current_timestep, obs_state_location, obs_state_orientation, obs_state_timesteps, obs_state_goal = self.get_observations_and_state()
-        return np.concatenate((obs_map, obs_current_timestep, obs_state_location, obs_state_orientation, obs_state_goal))
-
-    def get_state(self):
-        '''
-        why do we need to seperate get_state and get_observations?
-        Shhhhhhh
-        '''
-        return (self.get_observations_and_state())
-
-    def set_state(self, state):
-        obs_map, obs_current_timestep, obs_state_location, obs_state_orientation, obs_state_timesteps, obs_state_goal = state
-
-    def step(self, actions):
-        return self.get_actions()
-
-    def get_reward(self):
-        return 0
-    
-    def get_done(self):
-        pass
-
-    def reset(self):
-        self.first_state = self.get_observations()
-
-    def render(self):
-        '''
-        use ascii to render the environment - mainly for debug purpose
-        
-        
-
-        '''
-        # print(self.get_state()[2])    # debug purposed (to see whether the state is updated)
-
-    
 
 
 if __name__ == "__main__":
