@@ -49,7 +49,7 @@ Map Symbols:
 | S                      | service point (for ‘pick up’ goal) - traversable                                                                                                                                                                                                        |
 
 
-## Onput File (in JSON format)
+## Output File (in JSON format)
 
 The output file of `./lifelong` is a JSON file consisting of the planner output, actual paths of robots, and the statistics.
 
